@@ -1,0 +1,113 @@
+@import "tailwindcss";
+
+html.dark {
+  @apply bg-gray-950 text-gray-100;
+  color-scheme: dark;
+}
+
+html {
+  @apply bg-white text-gray-900;
+  color-scheme: light;
+}
+
+/* Premium theme transition effect across all elements */
+body, nav, div, p, span, h1, h2, h3, h4, h5, h6, a, button, input, select, textarea, svg {
+  transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Global class overrides for dark theme */
+html.dark body {
+  background-color: #030712; /* gray-950 */
+  color: #f9fafb; /* gray-50 */
+}
+
+/* Background overrides */
+html.dark .bg-white {
+  background-color: #090d16 !important; /* Premium deep dark navy */
+}
+
+/* Handles tailwind opacity backgrounds like bg-white/90 in layout */
+html.dark [class*="bg-white/"] {
+  background-color: rgba(9, 13, 22, 0.9) !important;
+}
+
+html.dark .bg-gray-50,
+html.dark .bg-gray-100 {
+  background-color: #111827 !important; /* Premium card background */
+}
+
+html.dark .hover\:bg-gray-50:hover,
+html.dark .hover\:bg-gray-100:hover {
+  background-color: #1f2937 !important; /* hover state */
+}
+
+html.dark .bg-red-50 {
+  background-color: rgba(219, 68, 68, 0.12) !important; /* Elegant dark red opacity */
+}
+
+/* Text overrides */
+html.dark .text-black,
+html.dark .text-gray-900,
+html.dark .text-gray-800,
+html.dark .text-gray-700 {
+  color: #f3f4f6 !important;
+}
+
+html.dark .text-gray-600,
+html.dark .text-gray-500 {
+  color: #9ca3af !important;
+}
+
+html.dark .text-gray-400 {
+  color: #6b7280 !important;
+}
+
+html.dark .text-white {
+  color: #ffffff !important; /* Keep pure white text on solid buttons/badges */
+}
+
+/* Border overrides */
+html.dark .border,
+html.dark .border-gray-100,
+html.dark .border-gray-200,
+html.dark .border-gray-300 {
+  border-color: #1f2937 !important;
+}
+
+/* Logo inversion for perfect dark mode visibility */
+html.dark img[alt="Logo"] {
+  filter: invert(1) brightness(1.6) contrast(1.15) !important;
+}
+
+/* Specific elements adjustments */
+html.dark input, 
+html.dark textarea, 
+html.dark select {
+  background-color: #111827 !important;
+  color: #f9fafb !important;
+  border-color: #1f2937 !important;
+}
+
+html.dark input.bg-transparent {
+  background-color: transparent !important;
+}
+
+html.dark input::placeholder, 
+html.dark textarea::placeholder {
+  color: #6b7280 !important;
+}
+
+/* Dark focus states */
+html.dark .focus-within\:border-red-500:focus-within,
+html.dark .focus\:border-black:focus {
+  border-color: #DB4444 !important;
+}
+
+/* Table, dividers and lists styling */
+html.dark hr,
+html.dark .divide-y > * + * {
+  border-color: #1f2937 !important;
+}

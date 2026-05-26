@@ -1,73 +1,57 @@
-# React + TypeScript + Vite
+# Документация по проекту и исправлениям (Project Fixes & Documentation)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+В этом документе пошагово описано, **что именно** было сделано в проекте (в пользовательской части), **какие технологии** использовались для решения проблем и **почему** были приняты такие решения (обоснование).
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 1. Исправление переменных окружения (.env)
+**Проблема:** В файле `.env` использовался неверный синтаксис `export VITE_API_URL = "..."`.
+**Что было сделано:** Синтаксис был заменен на классический формат ключ-значение: `VITE_API_URL=https://fastcard-1-o23z.onrender.com/api`.
+**Обоснование:** Сборщик **Vite** не понимает ключевое слово `export` и кавычки в `.env` файлах. Из-за этого переменная возвращала `undefined`, и все API-запросы ломались (шли на `undefined/UserProfile/...`) или падали без явной причины. Это был корень проблемы с неработающими запросами.
 
-## React Compiler
+## 2. Исправление логики авторизации (Login)
+**Проблема:** При входе в систему не было обратной связи (уведомлений) при ошибке или успехе. Пользователь мог нажать кнопку несколько раз, так как не было состояния загрузки.
+**Что было сделано:** 
+- Добавлено состояние загрузки `loading` (React `useState`). Во время запроса кнопка отключается (`disabled`) и показывает крутящийся спиннер.
+- Добавлены всплывающие уведомления (toasts) с помощью библиотеки `sileo` для информирования пользователя об успехе или неудаче.
+- Добавлена гибкая обработка ответа от бэкенда, которая умеет находить токен в `data.data`, `data.token`, `data.accessToken` или даже если бэкенд возвращает просто строку.
+**Обоснование:** Это значительно улучшает **UX (пользовательский опыт)**. Пользователь всегда понимает, почему он не может войти (например, неверный пароль) и видит, что процесс загрузки уже идет. Блокировка кнопки предотвращает двойную отправку одинаковых запросов на сервер.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 3. Исправление работы с Redux (accountSlice.ts)
+**Проблема:** 
+1. API-запрос уходил на двойной URL (`https://.../api/https://.../api/...`), так как в инстансе `axiosRequest` уже был прописан `baseURL`, а в запросе `url` добавлялся повторно.
+2. API (`/UserProfile/get-user-profiles`) возвращал массив *всех* пользователей (37 человек), а фронтенд всегда брал первого человека в списке (`data[0]`). Из-за этого любой пользователь видел профиль администратора.
+**Что было сделано:**
+- Убран дублирующийся базовый URL в вызовах Axios.
+- Написана функция декодирования **JWT токена** (`decodeJwt`). Она читает токен из `localStorage` и достает оттуда уникальный `userId` или `userName` текущего пользователя.
+- Из полученного списка профилей теперь фильтруется и сохраняется в стейт только тот, чей `userId` совпадает с залогиненным пользователем.
+- Исправлены дубликаты интерфейсов `AccountState` в Redux срезе.
+**Обоснование:** Показывать чужие данные — критическая уязвимость. Парсинг JWT прямо на фронтенде — это безопасный, стандартный и надежный способ узнать, чей именно токен сейчас используется, чтобы корректно отфильтровать нужный профиль из общего массива.
 
-## Expanding the ESLint configuration
+## 4. Переработка страницы аккаунта (account.tsx)
+**Проблема:** Страница аккаунта ожидала массив данных (из-за ошибки в Redux) и падала, если данных не было. Не было красивых состояний загрузки.
+**Что было сделано:**
+- Полностью переписан компонент React. Добавлены состояния `loading` (анимированный спиннер загрузки) и `error` (кнопка повторной попытки).
+- Добавлен автоматический редирект (с помощью хука `useNavigate`) на страницу `/login`, если в `localStorage` отсутствует токен (защита роута).
+- Добавлена функция fallback-аватарки: если у пользователя нет загруженной фотографии, генерируется красивая круглая аватарка с его инициалами (например, "M") на градиентном фоне.
+- Данные (Имя, Фамилия, Телефон, Email, Дата рождения) корректно распределены по полям из объекта `AccountData`.
+**Обоснование:** Код стал более отказоустойчивым. Редирект защищает приватную страницу от неавторизованных посетителей. Градиентные аватарки с инициалами делают интерфейс более "премиальным" и живым, что соответствует современным стандартам UI-дизайна.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 5. Исправление бага с выпадающим меню (UserDropdown в navComponents.tsx)
+**Проблема:** При наведении на аватарку в шапке (header) появлялось меню с пунктами "Account" и "Logout". Но когда пользователь пытался перевести на него мышку, меню исчезало ("не получалось поймать модалку").
+**Что было сделано:** В Tailwind CSS классах внешний отступ `mt-2` (margin-top) был заменен на обертку с внутренним отступом `pt-2` (padding-top).
+**Обоснование:** По правилам CSS, марджины (внешние отступы) создают пустую "мертвую зону". Как только курсор попадал в этот зазор, браузер считал, что мышь ушла с элемента, и снимал класс `:hover`. Padding (внутренний отступ) делает этот зазор частью самого элемента (сохраняя прозрачность), поэтому мышь остается над элементом, и меню больше не пропадает.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## 6. Добавление переводов (i18n / translation.json)
+**Проблема:** Отсутствовали локализованные тексты для новых уведомлений (toast) при логине.
+**Что было сделано:** В файлы локализации `translation.json` (для английского `en` и русского `ru`) были добавлены переводы ключей: `successTitle`, `successDesc`, `errorTitle`, `errorDesc`.
+**Обоснование:** Приложение использует библиотеку `react-i18next` для мультиязычности. Чтобы уведомления не выводились в виде пустых строк или ключей, их нужно было перевести и добавить в JSON-файлы. Это сохраняет целостность локализации.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+---
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+### Итог по стеку технологий
+- **React & TypeScript:** Строгая типизация (`AccountData`) спасла от многих ошибок при рефакторинге компонента аккаунта.
+- **Redux Toolkit (`@reduxjs/toolkit`):** `createAsyncThunk` использовался для асинхронных запросов профиля с обработкой состояний `pending`, `fulfilled`, `rejected`.
+- **Axios:** Использовались интерсепторы (interceptors) для автоматического добавления `Bearer` токена в заголовки (`Authorization`).
+- **Tailwind CSS:** Использовался для создания современных UI элементов (градиенты для аватарок, анимации загрузки `animate-spin`, правильные отступы для решения бага с hover). 
+- **Vite:** Сборщик, для которого было необходимо правильно настроить файл переменных окружения.
